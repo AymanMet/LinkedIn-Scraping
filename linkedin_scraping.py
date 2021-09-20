@@ -15,9 +15,13 @@ def asking_for_inputs():
     people working there while filtering them by keywords\n""")
     print(welcome_message)
 
-    company_url = input('So please, enter the link of the company\n')
+    url = input('So please, enter the link of the company\n')
+    if url[-8:] == '/people/':
+        company_url = url
+    else:
+        company_url = url + 'people/'
+
     keywords = []
-    
     while True:
         keyword = input('Enter one keyword or enter no to start searching\n').lower()
         if keyword == 'no':
@@ -48,6 +52,12 @@ def sign_in(path_to_user_info_file: str):
 def retreive_profile_links_from_company_url(url: str, driver):
     driver.get(url)
     time.sleep(3)
+
+    source = driver.page_source
+    soup = BeautifulSoup(source, 'lxml')
+    companyNumber_tag = soup.find('title')
+    companyNumber = companyNumber_tag.text.split(' ')[0]+' '
+
     previous_height = driver.execute_script('return document.body.scrollHeight')
 
     while True:
@@ -64,9 +74,9 @@ def retreive_profile_links_from_company_url(url: str, driver):
         link = link_tag.get_attribute('href')
         links.append(link)
 
-    return links
+    return links, companyNumber
 
-def retreive_data_from_each_link(links: list, key: str, driver):
+def retreive_data_from_each_link(links: list, key: str, driver, companyNumber):
     info_path = 'detail/contact-info/'
     emails = []
     numbers = []
@@ -100,17 +110,19 @@ def retreive_data_from_each_link(links: list, key: str, driver):
         
         driver.get(prof)
         time.sleep(2)
+        source = driver.page_source
+        soup = BeautifulSoup(source, 'lxml')
         
         try:
-            jobTitle_tag = driver.find_elements_by_xpath('//h2[@class = "mt1 t-18 t-black t-normal break-words"]')
-            jobTitle = jobTitle_tag[0].text
+            jobTitle_tag = soup.find('div', {'class':'text-body-medium break-words'})
+            jobTitle = jobTitle_tag.text.strip()
         except:
             jobTitle = None
         jobTitles.append(jobTitle)
         
         try:
-            fullName_tag = driver.find_elements_by_xpath('//li[@class = "inline t-24 t-black t-normal break-words"]')        
-            fullName = fullName_tag[0].text
+            fullName_tag = soup.find('title')
+            fullName = fullName_tag.text.split('|')[0].strip(companyNumber)
         except:
             fullName = None
         fullNames.append(fullName)
@@ -139,9 +151,9 @@ if __name__ == "__main__":
         url = company_url + key_tag + key
         print(url)
 
-        links = retreive_profile_links_from_company_url(url, driver)
+        links, comp_no = retreive_profile_links_from_company_url(url, driver)
         print(len(links))
-        data = retreive_data_from_each_link(links, key, driver)
+        data = retreive_data_from_each_link(links, key, driver, comp_no)
         
         df= df.append(data)
 
