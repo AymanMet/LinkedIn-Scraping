@@ -11,5 +11,5 @@
 
 * You should have a file named 'user_info.txt' containing your LinkedIn account credentials in two lines like the following:
 
-   **your_email**
+   **your_email**  
    **your_password**
